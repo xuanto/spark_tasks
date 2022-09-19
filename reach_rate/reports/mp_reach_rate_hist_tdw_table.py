@@ -1,5 +1,5 @@
 # coding: utf-8
-# author (╯°□°）╯︵┻━┻)
+# author █████
 #
 # MP达成报表，针对各行业重点优化目标（第一第二目标），统计其达成率，不超成本率等信息
 
@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 TDW_RES_DBNAME = 'ams_industry2'
 TDW_RES_TABLENAME = 'mp_reach_rate_report_hist_data_d'
+TDW_RES_TABLENAME_GDT = 'achieve_rate_report_hist_data_d'
 SQL_MID_TEMPLATE = """op_industry,
             SUM(if(real_cost_sum > 0, 1, 0)) as ad_num,
             SUM(real_cost_sum * reach_rate_target) / SUM(real_cost_sum) as reach_rate_target_cpa,
@@ -47,7 +48,7 @@ SQL_MID_TEMPLATE = """op_industry,
                     WHEN (op_industry in ('本地生活')) THEN 'bdsh'
                 END AS op_industry,
                 real_cost_sum,
-                if(second_goal = 0, gmv1, gmv2) as gmv,
+                gmv,
                 exposure_num,
                 click_num,
                 if(second_goal = 0, conversion_num, second_conversion_num) as conversion_num,
@@ -63,26 +64,24 @@ SQL_MID_TEMPLATE = """op_industry,
                 SELECT
                     adgroup_id,
                     industry_group as op_industry,
-                    if(second_goal > 0 and deep_stage_status > 1, 1, 0) as second_goal,
+                    second_optimization_goal as second_goal,
                     MAX(if(ocpa_bid_strategy = 2, 1, 0)) as use_amount_first,
-                    MAX(if(deep_stage_status = 2, 1, 0)) as reach_double_phase,
-                    SUM(valid_exposure_count) as exposure_num,
-                    SUM(valid_click_count) AS click_num,
-                    (SUM(cost / 10000) / SUM(ocpx_conversion_cnt)) / (SUM(vc_target_cpa) / SUM(valid_click_count)) - 1 AS first_cpa_bias,
-                    (SUM(cost / 10000) / SUM(second_conversion_cnt)) / (SUM(vc_deep_target_cpa) / SUM(valid_click_count)) - 1 AS second_cpa_bias,
-                    SUM(cost / 1000000) AS real_cost_sum,
+                    SUM(valid_exposure_cnt) as exposure_num,
+                    SUM(valid_click_cnt) AS click_num,
+                    (SUM(real_cost_micros / 10000) / SUM(ocpx_conversion_cnt)) / (SUM(vc_target_cpa) / SUM(valid_click_cnt)) - 1 AS first_cpa_bias,
+                    (SUM(real_cost_micros / 10000) / SUM(second_conversion_cnt)) / (SUM(vc_second_target_cpa) / SUM(valid_click_cnt)) - 1 AS second_cpa_bias,
+                    SUM(real_cost_micros / 1000000) AS real_cost_sum,
                     SUM(ocpx_conversion_cnt) AS conversion_num,
                     SUM(second_conversion_cnt) as second_conversion_num,
                     SUM(vc_target_cpa) AS first_target_cpa_sum,
-                    SUM(vc_deep_target_cpa) AS second_target_cpa_sum,
-                    SUM(first_gmv) / 100 as gmv1,
-                    SUM(second_gmv) / 100 as gmv2,
-                    SUM(vc_adjusted_pcvr) / 1000000 AS valid_click_pcvr_sum,
+                    SUM(vc_second_target_cpa) AS second_target_cpa_sum,
+                    SUM(gmv_exp_d / 1000000) as gmv,
+                    SUM(vc_adjusted_smart_pcvr) / 1000000 AS valid_click_pcvr_sum,
                     SUM(vc_adjusted_smart_pcvr2) / 1000000 AS valid_click_pcvr2_sum,
                     SUM(ve_pctr) / 1000000 AS valid_exposure_pctr_sum,
-                    SUM(ocpa_gsp_factor) / SUM(if(bid_type = 4, valid_exposure_count, valid_click_count)) as gsp_factor,
+                    SUM(ve_or_vc_gsp_factor) / SUM(if(bid_type = 4, valid_exposure_cnt, valid_click_cnt)) as gsp_factor,
                     SUM(valid_gsp_exposure_gsp_factor) / SUM(valid_gsp_exposure_cnt) as real_gsp_factor
-                FROM ams_gxt::t_gxt_ad_d a
+                FROM ams_data_warehouse::t_report_ad_d a
                 join ams_access_db::t_ad_accounts_full_d b"""
 
 
@@ -116,7 +115,9 @@ def TDW_PL(tdw, argv):
     """
     # argvDate = '20211120'
     argvDate = '%s' % argv[0]
-    tableName = TDW_RES_TABLENAME
+    is_mp = True if argv[1] == "mp" else False
+    tableName = TDW_RES_TABLENAME if is_mp else TDW_RES_TABLENAME_GDT
+    mp_str = "=" if is_mp else "!="
 
     tdw.execute("use %s" % TDW_RES_DBNAME)
     AddPartition(tdw, tableName, argvDate)
@@ -138,17 +139,17 @@ INSERT
                             and a.partition_time > date_sub(%(argvDate)s, 1 + 1)
                             and a.process_time = date_sub(%(argvDate)s, 1)))
                     and a.partition_time <= %(argvDate)s
-                    and second_goal != 106
-                    and (first_goal > 0 and first_goal != 7)
-                    and a.site_set = 21
+                    and second_optimization_goal != 106
+                    and (optimization_goal > 0 and optimization_goal != 7)
+                    and a.site_set %(mpStr)s 21
                     and (a.no_compensation_type = 0 or a.no_compensation_type is null)
-                    and is_rta = 0
+                    and is_rta_dpa_ad = false
                     and is_ocpx = 1
-                    -- and auto_acquisition_switch = 0
-                GROUP BY adgroup_id, industry_group, if(second_goal > 0 and deep_stage_status > 1,1,0)) ad_base_info
+                    and auto_acquisition_status = 0
+                GROUP BY adgroup_id, industry_group, second_optimization_goal) ad_base_info
             ) ad_reach_info
         GROUP BY op_industry
-    """ % {"tableName": tableName, "argvDate": argvDate, "mid_sql": SQL_MID_TEMPLATE}
+    """ % {"tableName": tableName, "argvDate": argvDate, "mid_sql": SQL_MID_TEMPLATE, "mpStr": mp_str}
 
     tdw.WriteLog('SQL:' + SQL)
     tdw.execute(SQL)
@@ -164,17 +165,17 @@ INSERT
                 on a.partition_time = b.imp_date and a.advertiser_id = b.account_id
                   and a.partition_time = %(argvDate)s
                 WHERE b.industry_group in ('金融', '教育', '家居', '房产', '大交通', '医药', '运营商','商务服务','招商加盟','旅游','本地生活')
-                    and a.site_set = 21
+                    and a.site_set %(mpStr)s 21
                     and (not (a.no_compensation_type != 0 and a.no_compensation_type is not null))
-                    and second_goal != 106
-                    and (first_goal > 0 and first_goal != 7)
-                    and is_rta = 0
-                    and is_ocpx = 1
-                    -- and auto_acquisition_switch = 0
-                GROUP BY adgroup_id, industry_group, if(second_goal > 0 and deep_stage_status > 1,1,0)) ad_base_info
+                    and second_optimization_goal != 106
+                    and (optimization_goal > 0 and optimization_goal != 7)
+                    and is_rta_dpa_ad = false
+                    and is_ocpx = true
+                    and auto_acquisition_status = 0
+                GROUP BY adgroup_id, industry_group, second_optimization_goal) ad_base_info
             ) ad_reach_info
         GROUP BY op_industry
-    """ % {"tableName": tableName, "argvDate": argvDate, "mid_sql": SQL_MID_TEMPLATE}
+    """ % {"tableName": tableName, "argvDate": argvDate, "mid_sql": SQL_MID_TEMPLATE, "mpStr": mp_str}
 
     tdw.WriteLog('SQL:' + SQL)
     tdw.execute(SQL)

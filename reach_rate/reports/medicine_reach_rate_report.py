@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 """
-Copyright (c) 2021, Tencent Inc.
+Copyright (c) 2021, █████ Inc.
 All Rights Reserved.
-Author: (╯°□°）╯︵┻━┻) <(╯°□°）╯︵┻━┻)@tencent.com>
+Author: █████ <█████@█████.com>
 医药行业达成率报表脚本，拆分子行业，到达口径，写入mysql DB
-达成率报表建设文档：https://docs.qq.com/doc/DYXplcXdySlNoWEJN
+达成率报表建设文档：████████████████████
 """
 from pyspark import SparkContext, SQLContext
 from pytoolkit import TDWProvider
@@ -35,9 +35,9 @@ def save_df_into_mysqldb(df, table_name):
     mode 设为 overwrite 保证表中数据皆为最新数据
          设为 append    表中保留历史数据
     """
-    url = "jdbc:mysql://100.65.202.233:4183/reports" + \
+    url = "jdbc:mysql://█████.█████.█████.233:4183/reports" + \
             "?useSSL=false&useUnicode=true&characterEncoding=utf8"
-    auth_mysql = {"user": "user_00", "password": "isd!@#user"}
+    auth_mysql = {"user": "█████", "password": "█████"}
     df.write.jdbc(url, table_name, mode="append", properties=auth_mysql)
     return
 

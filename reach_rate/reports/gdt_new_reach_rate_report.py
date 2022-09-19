@@ -1,12 +1,11 @@
 # -*- coding:utf-8 -*-
 """
-Copyright (c) 2021, Tencent Inc.
+Copyright (c) 2021, █████ Inc.
 All Rights Reserved.
-Author: (╯°□°）╯︵┻━┻) <(╯°□°）╯︵┻━┻)@tencent.com>
+Author: █████ <█████@█████.com>
 python env: python3
 
 达成率报表脚本，计算新口径达成率并整合旧口径达成率，写入mysql DB
-达成率报表建设文档：https://docs.qq.com/doc/DYXplcXdySlNoWEJN
 """
 from pyspark import SparkContext, SQLContext
 from pytoolkit import TDWProvider
@@ -34,8 +33,8 @@ ACHIEVE_INTERVAL_MAP_EDU = {
     DIM_ADVERTISER: {1: 0.1, 2: 0.1, 3: 0.1, 4: 0.1, 5: INF_NUM}
 }
 MYSQL_URL = \
-    'jdbc:mysql://100.65.202.233:4183/reports?useSSL=false&useUnicode=true&characterEncoding=utf8'
-DEBUG_FILE_PATH = "hdfs://ss-cdg-13-v2/user/tdw_(╯°□°）╯︵┻━┻)/tmp/reach_rate_analysis/"
+    'jdbc:mysql://█████.█████.█████.233:4183/reports?useSSL=false&useUnicode=true&characterEncoding=utf8'
+DEBUG_FILE_PATH = "hdfs://█████/user/tdw_█████/tmp/reach_rate_analysis/"
 
 
 @udf(returnType=IntegerType())
@@ -458,17 +457,17 @@ if __name__ == '__main__':
     #  magic_code = 16  按照子品牌x转化数分桶聚合计算新达成率
     #（目前未使用此报表，当magic_code=16时，save应为no）
     ################################################################
-    if ((magic_code & 16) != 0):
-        col_list = ["partition_date", "op_industry2", "sub_brand", "active_bucket"] \
-                + common_col_list + ["reach_rate", "below_rate", "gmv_to_cost"]
-        group_list = ["partition_date", "op_industry2", "sub_brand", "active_bucket"]
-        sub_brand_df = caculate_table_value(joined_df, group_list, col_list)
-        print((sub_brand_df.count(), len(sub_brand_df.columns)))
-        sub_brand_df = sub_brand_df.filter(sql_sub_brand)
-        print((sub_brand_df.count(), len(sub_brand_df.columns)))
-        if save_to_db:
-            save_df_into_mysqldb(sub_brand_df.orderBy(F.desc("cost")),
-                                 "vip_sub_brand_bucket_reach_rate_d")
+    # if ((magic_code & 16) != 0):
+    #     col_list = ["partition_date", "op_industry2", "sub_brand", "active_bucket"] \
+    #             + common_col_list + ["reach_rate", "below_rate", "gmv_to_cost"]
+    #     group_list = ["partition_date", "op_industry2", "sub_brand", "active_bucket"]
+    #     sub_brand_df = caculate_table_value(joined_df, group_list, col_list)
+    #     print((sub_brand_df.count(), len(sub_brand_df.columns)))
+    #     sub_brand_df = sub_brand_df.filter(sql_sub_brand)
+    #     print((sub_brand_df.count(), len(sub_brand_df.columns)))
+    #     if save_to_db:
+    #         save_df_into_mysqldb(sub_brand_df.orderBy(F.desc("cost")),
+    #                              "vip_sub_brand_bucket_reach_rate_d")
 
     print("all works done!")
     spark.stop()
