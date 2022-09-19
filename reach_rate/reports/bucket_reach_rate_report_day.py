@@ -1,7 +1,5 @@
 # -*- coding:utf-8 -*-
 """
-Copyright (c) 2021, █████ Inc.
-All Rights Reserved.
 Author: █████ <█████@█████.com>
 达成率报表脚本，计算新口径达成率并整合旧口径达成率，写入mysql DB
 达成率报表建设文档：████████████████████

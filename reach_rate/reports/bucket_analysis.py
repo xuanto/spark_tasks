@@ -1,10 +1,7 @@
 # coding: utf-8
 """
-Copyright (c) 2021, █████ Inc.
-All Rights Reserved.
 Author: █████ <█████>
 综合第一第二目标，按照转化数分桶统计其达成率，不超成本率等信息
-lz_id: █████
 """
 
 from datetime import datetime, timedelta

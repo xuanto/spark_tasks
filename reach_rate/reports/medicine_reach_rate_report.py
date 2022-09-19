@@ -1,10 +1,7 @@
 # -*- coding:utf-8 -*-
 """
-Copyright (c) 2021, █████ Inc.
-All Rights Reserved.
 Author: █████ <█████@█████.com>
 医药行业达成率报表脚本，拆分子行业，到达口径，写入mysql DB
-达成率报表建设文档：████████████████████
 """
 from pyspark import SparkContext, SQLContext
 from pytoolkit import TDWProvider

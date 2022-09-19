@@ -1,8 +1,6 @@
 # -*- coding:utf-8 -*-
 """
-Copyright (c) 2021, Tencent Inc.
-All Rights Reserved.
-Author: Ning Wang <batwang@tencent.com>
+Author: Ning Wang <█████@█████.com>
 转换crm行业id为1级和2级行业id，在本项目中未使用
 """
 

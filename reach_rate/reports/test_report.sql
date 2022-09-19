@@ -1,4 +1,4 @@
--- idex删除分区
+-- 删除分区
 use ams_industry2;
 ALTER TABLE achieve_rate_report_hist_data_d DROP PARTITION(p_20220119);
 ALTER TABLE mp_reach_rate_report_hist_data_d DROP PARTITION(p_20220119);
