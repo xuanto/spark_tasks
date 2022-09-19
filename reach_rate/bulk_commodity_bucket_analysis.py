@@ -2,7 +2,7 @@
 """
 Copyright (c) 2021, Tencent Inc.
 All Rights Reserved.
-Author: (╯°□°）╯︵┻━┻) <(╯°□°）╯︵┻━┻)@tencent.com>
+Author: batwang <batwang@tencent.com>
 车房医家，按照转化数和pcvr_bias分桶统计其达成率，不超成本率等信息
 
 sql部分内容可以直接跑

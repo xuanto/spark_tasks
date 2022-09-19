@@ -1,10 +1,10 @@
 # coding: utf-8
 """
-Copyright (c) 2021, Tencent Inc.
+Copyright (c) 2021, █████ Inc.
 All Rights Reserved.
-Author: (╯°□°）╯︵┻━┻) <(╯°□°）╯︵┻━┻)@tencent.com>
+Author: █████ <█████>
 综合第一第二目标，按照转化数分桶统计其达成率，不超成本率等信息
-lz_id: 
+lz_id: █████
 """
 
 from datetime import datetime, timedelta
@@ -48,7 +48,7 @@ def TDW_PL(tdw, argv):
 INSERT
     TABLE %(tableName)s
         SELECT
-            %(argvDate)s as partition_date,
+            %(argvDate)s as partition_time,
             op_industry,
             op_industry2,
             active_bucket,
@@ -93,50 +93,45 @@ INSERT
                     adgroup_id,
                     b.industry_group as op_industry,
                     b.industry_team_level2 as op_industry2,
-                    second_goal,
-                    MAX(if(bid_strategy = 2, 1, 0)) as use_amount_first,
-                    MAX(if(deep_stage_status = 2, 1, 0)) as reach_double_phase,
+                    second_optimization_goal as second_goal,
+                    MAX(if(ocpa_bid_strategy = 2, 1, 0)) as use_amount_first,
                     SUM(valid_exposure_cnt) as exposure_num,
                     SUM(valid_click_cnt) AS click_num,
-                    (SUM(real_cost_micros) / 10000 / SUM(active_num)) / (SUM(valid_click_target_cpa) / SUM(valid_click_cnt)) - 1 AS first_cpa_bias,
-                    (SUM(real_cost_micros) / 10000 / SUM(second_active_num)) / (SUM(vc_second_bid) / SUM(valid_click_cnt)) - 1 AS second_cpa_bias,
+                    (SUM(real_cost_micros) / 10000 / SUM(ocpx_conversion_cnt)) / (SUM(vc_target_cpa) / SUM(valid_click_cnt)) - 1 AS first_cpa_bias,
+                    (SUM(real_cost_micros) / 10000 / SUM(second_conversion_cnt)) / (SUM(vc_second_target_cpa) / SUM(valid_click_cnt)) - 1 AS second_cpa_bias,
                     SUM(real_cost_micros) / 1000000 AS real_cost_sum,
-                    SUM(active_num) AS conversion_num,
-                    SUM(second_active_num) as second_conversion_num,
-                    SUM(valid_click_target_cpa) AS first_target_cpa_sum,
-                    SUM(vc_second_bid) AS second_target_cpa_sum,
-                    SUM(gmv) / 100 as GMV,
-                    SUM(second_gmv) / 100 as GMV2,
-                    SUM(adjusted_smart_pcvr) / 1000000 AS valid_click_pcvr_sum,
+                    SUM(ocpx_conversion_cnt) AS conversion_num,
+                    SUM(second_conversion_cnt) as second_conversion_num,
+                    SUM(vc_target_cpa) AS first_target_cpa_sum,
+                    SUM(vc_second_target_cpa) AS second_target_cpa_sum,
+                    SUM(gmv_exp_d / 1000000) as gmv,
+                    SUM(vc_adjusted_smart_pcvr) / 1000000 AS valid_click_pcvr_sum,
                     SUM(vc_adjusted_smart_pcvr2) / 1000000 AS valid_click_pcvr2_sum,
-                    SUM(valid_exposure_pctr) / 1000000 AS valid_exposure_pctr_sum,
-                    SUM(ocpa_gsp_factor) / SUM(if(bid_type = 4, valid_exposure_cnt, valid_click_cnt)) as gsp_factor,
-                    SUM(valid_gsp_exposure_gsp_factor) / SUM(valid_gsp_exposure_cnt) as real_gsp_factor,
+                    SUM(ve_pctr) / 1000000 AS valid_exposure_pctr_sum,
+                    SUM(ve_or_vc_gsp_factor) / SUM(if(bid_type = 4, valid_exposure_cnt, valid_click_cnt)) as gsp_factor,
+                    SUM(valid_gsp_exposure_gsp_factor) / SUM(valid_gsp_exposure_cnt) as real_gsp_factor
                     CASE
                         WHEN (
-                            (second_goal = 0 and (SUM(active_num) > 10 or SUM(real_cost_micros) / 10000 > 10 * SUM(valid_click_target_cpa) / SUM(valid_click_cnt)))
-                                or (second_goal > 0 and (SUM(second_active_num) > 10 or SUM(real_cost_micros) / 10000 > 10 * SUM(vc_second_bid) / SUM(valid_click_cnt)))
+                            (second_optimization_goal = 0 and (SUM(ocpx_conversion_cnt) > 10 or SUM(real_cost_micros) / 10000 > 10 * SUM(vc_target_cpa) / SUM(valid_click_cnt)))
+                                or (second_optimization_goal > 0 and (SUM(second_conversion_cnt) > 10 or SUM(real_cost_micros) / 10000 > 10 * SUM(vc_second_target_cpa) / SUM(valid_click_cnt)))
                         ) THEN '转化大于10'
                         WHEN (
-                            (second_goal = 0 and (SUM(active_num) > 2 or SUM(real_cost_micros) / 10000 > 2 * SUM(valid_click_target_cpa) / SUM(valid_click_cnt)))
-                                or (second_goal > 0 and (SUM(second_active_num) > 2 or SUM(real_cost_micros) / 10000 > 2 * SUM(vc_second_bid) / SUM(valid_click_cnt)))
+                            (second_optimization_goal = 0 and (SUM(ocpx_conversion_cnt) > 2 or SUM(real_cost_micros) / 10000 > 2 * SUM(vc_target_cpa) / SUM(valid_click_cnt)))
+                                or (second_optimization_goal > 0 and (SUM(second_conversion_cnt) > 2 or SUM(real_cost_micros) / 10000 > 2 * SUM(vc_second_target_cpa) / SUM(valid_click_cnt)))
                         ) THEN '转化大于2小于等于10'
                         ELSE '转化小于等于2'
                     END as active_bucket
-                FROM hlw_gdt::t_ocpa_middle_table_d a
+                FROM ams_data_warehouse::t_report_ad_d a
                 join ams_access_db::t_ad_accounts_full_d b
-                on a.partition_date = b.imp_date and a.advertiser_id = b.account_id
+                on a.partition_time = b.imp_date and a.advertiser_id = b.account_id
                     and a.site_set != 21
                     and (not (a.no_compensation_type != 0 and a.no_compensation_type is not null))
                 WHERE b.industry_group in ('金融', '教育', '家居', '房产', '大交通', '医药')
-                    and a.partition_date = %(argvDate)s
-                    and second_goal != 106
-                GROUP BY adgroup_id, b.industry_group, b.industry_team_level2, second_goal) ad_base_info
+                    and a.partition_time = %(argvDate)s
+                    and second_optimization_goal != 106
+                GROUP BY adgroup_id, b.industry_group, b.industry_team_level2, second_optimization_goal) ad_base_info
             WHERE real_cost_sum > 0
                 and click_num > 0
-                and ((reach_double_phase = 1
-                      and second_target_cpa_sum > 0)
-                     or first_target_cpa_sum > 0)
             ) ad_reach_info
         GROUP BY op_industry, op_industry2, active_bucket
     """ % {"tableName": tableName, "argvDate": argvDate}
